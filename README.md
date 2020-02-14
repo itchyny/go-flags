@@ -3,6 +3,8 @@ go-flags: a go library for parsing command line arguments
 
 [![GoDoc](https://godoc.org/github.com/itchyny/go-flags?status.png)](https://godoc.org/github.com/itchyny/go-flags) [![CI Status](https://github.com/itchyny/go-flags/workflows/CI/badge.svg)](https://github.com/itchyny/go-flags/actions)
 
+**This is a fork version of [jessevdk/go-flags](https://github.com/jessevdk/go-flags).**
+
 This library provides similar functionality to the builtin flag library of
 go, but provides much more functionality and nicer formatting. From the
 documentation:
