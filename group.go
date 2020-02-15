@@ -7,6 +7,7 @@ package flags
 import (
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 )
@@ -276,6 +277,16 @@ func (g *Group) scanStruct(realval reflect.Value, sfield *reflect.StructField, h
 		optional := !isStringFalsy(mtag.Get("optional"))
 		required := !isStringFalsy(mtag.Get("required"))
 		choices := mtag.GetMany("choice")
+		var count int
+		if s := mtag.Get("count"); s != "" {
+			var err error
+			if count, err = strconv.Atoi(s); err != nil || count < 1 {
+				return newErrorf(ErrInvalidCount, "failed to parse count `%s'", s)
+			}
+			if len(def) > 0 {
+				return newError(ErrInvalidCountDefault, "cannot specify default and count")
+			}
+		}
 		hidden := !isStringFalsy(mtag.Get("hidden"))
 
 		option := &Option{
@@ -291,6 +302,7 @@ func (g *Group) scanStruct(realval reflect.Value, sfield *reflect.StructField, h
 			ValueName:        valueName,
 			DefaultMask:      defaultMask,
 			Choices:          choices,
+			Count:            count,
 			Hidden:           hidden,
 
 			group: g,

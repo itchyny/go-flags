@@ -663,3 +663,78 @@ func TestCommandHandler(t *testing.T) {
 
 	assertStringArray(t, executedArgs, []string{"arg1", "arg2"})
 }
+
+type countOptions struct {
+	Int               []int          `long:"i" count:"3"`
+	Float64           []float64      `long:"f" count:"4"`
+	String            []string       `long:"str" count:"2"`
+	StringNotUnquoted []string       `long:"stru" count:"2" unquote:"false"`
+	Map               map[string]int `long:"m" count:"2"`
+}
+
+func TestCount(t *testing.T) {
+	var tests = []struct {
+		msg      string
+		args     []string
+		expected countOptions
+		err      string
+	}{
+		{
+			msg:  "no arguments",
+			args: []string{},
+			expected: countOptions{
+				Map: map[string]int{},
+			},
+		},
+		{
+			msg: "multiple arguments",
+			args: []string{"--i=3", "4", "5", "--f", "1.00", "-1.01", "1.02", "-1.03",
+				"--str", "def", `"ghi"`, "--stru", `"foo"`, `"bar"`, "--m", "c", "3"},
+			expected: countOptions{
+				Int:               []int{3, 4, 5},
+				Float64:           []float64{1.00, -1.01, 1.02, -1.03},
+				String:            []string{"def", "ghi"},
+				StringNotUnquoted: []string{`"foo"`, `"bar"`},
+				Map:               map[string]int{"c": 3},
+			},
+		},
+		{
+			msg:  "invalid arguments count",
+			args: []string{"--i=3", "4"},
+			err:  "expected 3 arguments for flag `--i'",
+		},
+		{
+			msg:  "invalid arguments count",
+			args: []string{"--f", "1.00", "--str"},
+			err:  "expected 4 arguments for flag `--f', but got option `--str'",
+		},
+		{
+			msg:  "invalid arguments count",
+			args: []string{"--i", "1", "2", "--", "x"},
+			err:  "expected 3 arguments for flag `--i', but got double dash `--'",
+		},
+		{
+			msg:  "invalid arguments count for map",
+			args: []string{"--m", "x"},
+			err:  "expected 2 arguments for flag `--m'",
+		},
+	}
+
+	for _, test := range tests {
+		var opts countOptions
+
+		parser := NewParser(&opts, Default&^PrintErrors)
+		_, err := parser.ParseArgs(test.args)
+		if err != nil {
+			if test.err == "" {
+				t.Fatalf("%s:\nUnexpected error: %v", test.msg, err)
+			} else if !strings.HasPrefix(err.Error(), test.err) {
+				t.Fatalf("%s:\nUnexpected error: %v but got %v", test.msg, test.err, err)
+			}
+		}
+
+		if !reflect.DeepEqual(opts, test.expected) {
+			t.Errorf("%s:\nUnexpected options with arguments %+v\nexpected\n%+v\nbut got\n%+v\n", test.msg, test.args, test.expected, opts)
+		}
+	}
+}
