@@ -56,6 +56,15 @@ const (
 	// a certain number of choices.
 	ErrInvalidChoice
 
+	// ErrInvalidCount indicates an invalid count.
+	ErrInvalidCount
+
+	// ErrInvalidCountDefault indicates that default value is not allowed for count.
+	ErrInvalidCountDefault
+
+	// ErrInvalidCountMap indicates that the count is invalid for map type.
+	ErrInvalidCountMap
+
 	// ErrInvalidTag indicates an invalid tag or invalid use of an existing tag
 	ErrInvalidTag
 )
@@ -90,6 +99,12 @@ func (e ErrorType) String() string {
 		return "unknown command"
 	case ErrInvalidChoice:
 		return "invalid choice"
+	case ErrInvalidCount:
+		return "invalid count"
+	case ErrInvalidCountDefault:
+		return "invalid default for count"
+	case ErrInvalidCountMap:
+		return "invalid count for map"
 	case ErrInvalidTag:
 		return "invalid tag"
 	}

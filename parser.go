@@ -525,26 +525,61 @@ func (p *Parser) parseOption(s *parseState, name string, option *Option, canarg 
 
 		err = option.set(nil)
 	} else if argument != nil || (canarg && !s.eof()) {
-		var arg string
+		if option.Count > 1 {
+			args := make([]string, option.Count)
 
-		if argument != nil {
-			arg = *argument
-		} else {
-			arg = s.pop()
-
-			if validationErr := option.isValidValue(arg); validationErr != nil {
-				return newErrorf(ErrExpectedArgument, validationErr.Error())
-			} else if p.Options&PassDoubleDash != 0 && arg == "--" {
-				return newErrorf(ErrExpectedArgument, "expected argument for flag `%s', but got double dash `--'", option)
+			for i := 0; i < option.Count; i++ {
+				if argument != nil {
+					args[i] = *argument
+					argument = nil
+				} else if s.eof() {
+					return newErrorf(ErrExpectedArgument, "expected %d arguments for flag `%s'", option.Count, option)
+				} else {
+					arg := s.pop()
+					if validationErr := option.isValidValue(arg); validationErr != nil {
+						return newErrorf(ErrExpectedArgument, validationErr.Error())
+					} else if p.Options&PassDoubleDash != 0 && arg == "--" {
+						return newErrorf(ErrExpectedArgument, "expected %d arguments for flag `%s', but got double dash `--'", option.Count, option)
+					}
+					args[i] = arg
+				}
 			}
-		}
 
-		if option.tag.Get("unquote") != "false" {
-			arg, err = unquoteIfPossible(arg)
-		}
+			if option.tag.Get("unquote") != "false" {
+				for i, arg := range args {
+					arg, err = unquoteIfPossible(arg)
+					if err != nil {
+						break
+					}
+					args[i] = arg
+				}
+			}
 
-		if err == nil {
-			err = option.set(&arg)
+			if err == nil {
+				err = option.setMulti(args)
+			}
+		} else {
+			var arg string
+
+			if argument != nil {
+				arg = *argument
+			} else {
+				arg = s.pop()
+
+				if validationErr := option.isValidValue(arg); validationErr != nil {
+					return newErrorf(ErrExpectedArgument, validationErr.Error())
+				} else if p.Options&PassDoubleDash != 0 && arg == "--" {
+					return newErrorf(ErrExpectedArgument, "expected argument for flag `%s', but got double dash `--'", option)
+				}
+			}
+
+			if option.tag.Get("unquote") != "false" {
+				arg, err = unquoteIfPossible(arg)
+			}
+
+			if err == nil {
+				err = option.set(&arg)
+			}
 		}
 	} else if option.OptionalArgument {
 		option.empty()

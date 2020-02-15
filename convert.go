@@ -310,6 +310,66 @@ func convert(val string, retval reflect.Value, options multiTag) error {
 	return nil
 }
 
+func convertMulti(vals []string, retval reflect.Value, options multiTag) error {
+	tp := retval.Type()
+
+	switch tp.Kind() {
+	case reflect.Slice:
+		elemtp := tp.Elem()
+
+		for _, val := range vals {
+			elemvalptr := reflect.New(elemtp)
+			elemval := reflect.Indirect(elemvalptr)
+
+			if err := convert(val, elemval, options); err != nil {
+				return err
+			}
+
+			retval.Set(reflect.Append(retval, elemval))
+		}
+	case reflect.Map:
+		if len(vals) != 2 {
+			return newErrorf(ErrInvalidCountMap,
+				"count for map type should be 2 but got %d values",
+				len(vals))
+		}
+
+		key, value := vals[0], vals[1]
+
+		keytp := tp.Key()
+		keyval := reflect.New(keytp)
+
+		if err := convert(key, keyval, options); err != nil {
+			return err
+		}
+
+		valuetp := tp.Elem()
+		valueval := reflect.New(valuetp)
+
+		if err := convert(value, valueval, options); err != nil {
+			return err
+		}
+
+		if retval.IsNil() {
+			retval.Set(reflect.MakeMap(tp))
+		}
+
+		retval.SetMapIndex(reflect.Indirect(keyval), reflect.Indirect(valueval))
+	case reflect.Ptr:
+		if retval.IsNil() {
+			retval.Set(reflect.New(retval.Type().Elem()))
+		}
+
+		return convertMulti(vals, reflect.Indirect(retval), options)
+	case reflect.Interface:
+		if !retval.IsNil() {
+			return convertMulti(vals, retval.Elem(), options)
+		}
+	}
+
+	return nil
+}
+
 func isPrint(s string) bool {
 	for _, c := range s {
 		if !strconv.IsPrint(c) {

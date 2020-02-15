@@ -65,6 +65,9 @@ type Option struct {
 	// If non empty, only a certain set of values is allowed for an option.
 	Choices []string
 
+	// The number of arguments for the value of the option.
+	Count int
+
 	// If true, the option is not displayed in the help or man page
 	Hidden bool
 
@@ -278,6 +281,19 @@ func (option *Option) set(value *string) error {
 	}
 
 	return convert("", option.value, option.tag)
+}
+
+func (option *Option) setMulti(values []string) error {
+	kind := option.value.Type().Kind()
+
+	if (kind == reflect.Map || kind == reflect.Slice) && !option.isSet {
+		option.empty()
+	}
+
+	option.isSet = true
+	option.preventDefault = true
+
+	return convertMulti(values, option.value, option.tag)
 }
 
 func (option *Option) showInHelp() bool {
@@ -537,6 +553,9 @@ func (option *Option) isValidValue(arg string) error {
 		return validator.IsValidValue(arg)
 	}
 	if argumentIsOption(arg) && !(option.isSignedNumber() && len(arg) > 1 && arg[0] == '-' && arg[1] >= '0' && arg[1] <= '9') {
+		if option.Count > 1 {
+			return fmt.Errorf("expected %d arguments for flag `%s', but got option `%s'", option.Count, option, arg)
+		}
 		return fmt.Errorf("expected argument for flag `%s', but got option `%s'", option, arg)
 	}
 	return nil
